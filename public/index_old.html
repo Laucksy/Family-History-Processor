@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous"/>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous" ></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.2/css/bootstrap-select.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.2/js/bootstrap-select.min.js"></script>
+  </head>
+
+  <body>
+    <div class="d-flex flex-column flex-md-row align-items-center p-3 px-md-4 bg-dark">
+      <h5 class="my-0 mr-md-auto font-weight-normal text-light">Laucks Family History</h5>
+      <!-- <a class="btn btn-light" href="http://www.lafrefact.com">Visit our site</a> -->
+    </div>
+
+    <section class="jumbotron text-center">
+      <div class="container">
+        <h1 class="jumbotron-heading">Welcome to the Family History Processor!</h1>
+        <p class="lead text-muted">This is a tool for documenting family members and creating family trees.</p>
+        <p>
+          <!-- <div class="text-center">
+            <div class="btn-group">
+              <a href="#" id="btnRep" class="btn btn-secondary" onclick="handleClick('report')">Full Report</a>
+              <a href="#" id="btnTim" class="btn btn-light" onclick="handleClick('timeline')">Timeline</a>
+            </div>
+          </div> -->
+          <!-- <a href="#" class="btn btn-primary my-2" onclick="loadDoc()">Click here to generate the report.</a> -->
+        </p>
+      </div>
+    </section>
+
+    <div class="text-center">
+      <div class="btn-group">
+        <a href="#" id="btnPeo" class="btn btn-secondary" onclick="handleClick('people')">People</a>
+        <!-- <a href="#" id="btnTas" class="btn btn-light" onclick="handleClick('tasks')">Tasks</a>
+        <a href="#" id="btnPap" class="btn btn-light" onclick="handleClick('paperwork')">Paperwork</a>
+        <a href="#" id="btnApp" class="btn btn-light" onclick="handleClick('appendices')">Appendices</a> -->
+      </div>
+    </div>
+    <br />
+    <br />
+    <div id="content-table" class="container"></div>
+
+    <script type="text/javascript">
+      const state = {
+        people: [],
+        active: localStorage.getItem('FHP_activeTab') || 'people',
+        docType: 'report',
+        TIME_PERIODS: []
+      }
+      // const HOST = "http://13.52.185.145:3001"
+      const HOST = 'http://localhost:3001'
+
+      window.onload = function() {
+        handleClick(state.active)
+        makeRequest('GET', '/data', null,
+          function(res) {
+            let data = JSON.parse(res.responseText)
+            updateState(data)
+          },
+          function(err) {
+            updateState({})
+          }
+        )
+      }
+
+      function handleClick(tab) {
+        if (['people'].indexOf(tab) >= 0) {
+          state.active = tab
+          localStorage.setItem('FHP_activeTab', tab)
+          document.getElementById('btnPeo').className = 'btn' + (tab === 'people' ? ' btn-secondary' : ' btn-light')
+          render()
+        }
+        // else {
+        //   state.docType = tab;
+        //   document.getElementById("btnRep").className = "btn" + (tab === "report" ? " btn-secondary" : " btn-light");
+        //   document.getElementById("btnTim").className = "btn" + (tab === "timeline" ? " btn-secondary" : " btn-light");
+        // }
+      }
+
+      function updateState(data, item = null, i = null) {
+        // if (data.TIME_PERIODS) state.TIME_PERIODS = data.TIME_PERIODS
+        // if (data.categories)
+        //   state.categories = data.categories.sort(function(a, b) {
+        //     return a.number - b.number
+        //   })
+        console.log("a", data, item, i)
+        if (data.people) state.people = data.people
+        if (item) {
+          state[data][i] = item
+        }
+        render(item, i)
+      }
+
+      // function loadDoc() {
+      //   makeRequest("GET", "/generate/" + state.docType, null, function (res) {
+      //     window.open(HOST + res.responseText, "_blank");
+      //   });
+      // }
+
+      function makeRequest(method, url, data, success, error) {
+        var xhttp = new XMLHttpRequest()
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            success(this)
+          } else if (this.readyState === 4) {
+            //alert("Error on " + url + ": " + this.statusText);
+            error(this)
+          }
+        }
+        xhttp.open(method, HOST + url, true)
+        if (method === 'GET') xhttp.send()
+        else {
+          xhttp.setRequestHeader('Content-Type', 'application/json')
+          xhttp.send(JSON.stringify(data))
+        }
+      }
+    </script>
+
+    <script type="text/javascript">
+      let renderOptions = {
+        people: {
+          heading: function(item) {
+            return 'Person - ' + item.name
+          },
+          readonly: function(item) {
+            let result =
+              'Birth: ' +
+              item.birth?.date +
+              (item.birth?.location ? ' in ' + item.birth?.location : '')
+            result +=
+              '<br/>Death: ' +
+              item.death?.date +
+              (item.death?.location ? ' in ' + item.death?.location : '') +
+              (item.death?.burial ? '<br/>Burial: ' + item.death?.burial : '')
+
+            result += '<br/>Spouse: '
+            for (var k = 0; k < item.spouse?.length; k++) {
+              result += item.spouse[k].name + ', '
+            }
+            result = result.substring(0, result.length - 1)
+            result += '<br/>Former Marriages: '
+            for (var k = 0; k < item.exes?.length; k++) {
+              result += item.exes[k].name + ', '
+            }
+            result = result.substring(0, result.length - 1)
+
+            result += '<br/>Parents: '
+            for (var k = 0; k < item.parents?.length; k++) {
+              result += item.parents[k].name + ', '
+            }
+            result = result.substring(0, result.length - 1)
+
+            // result += '<br/>Paperwork Received: '
+            // for (var k = 0; k < item.paperworkReceived.length; k++) {
+            //   result += item.paperworkReceived[k].title + ', '
+            // }
+            // result = result.substring(0, result.length - 1)
+
+            result += '<br/>' + (item.description || '').replace(/<tab>/g, '&nbsp;&nbsp;&nbsp;&nbsp;').replace(/\n/g, '<br/>')
+            return result
+          },
+          editlayout: function(item) {
+            let pplList = state.people.map(function(p) {
+              return { _id: p._id, title: p.name }
+            })
+
+            return [
+              // Name
+              { type: 'label', innerHTML: 'Name:', width: '15%' },
+              { type: 'input', value: item.name, width: '30%', id: 'input-1-' },
+              { type: 'div', width: '55%', display: 'inline-block' },
+              // Birth
+              { type: 'label', innerHTML: 'Birth:', width: '15%' },
+              { type: 'input', value: item.birth?.date, width: '30%', id: 'input-2-' },
+              { type: 'div', width: '10%', display: 'inline-block' },
+              { type: 'label', innerHTML: 'Location:', width: '15%' },
+              { type: 'input', value: item.birth?.location, width: '30%', id: 'input-3-' },
+              // Death
+              { type: 'label', innerHTML: 'Death:', width: '15%' },
+              { type: 'input', value: item.death?.date, width: '30%', id: 'input-4-' },
+              { type: 'div', width: '10%', display: 'inline-block' },
+              { type: 'label', innerHTML: 'Location:', width: '15%' },
+              { type: 'input', value: item.death?.location, width: '30%', id: 'input-5-' },
+              { type: 'label', innerHTML: 'Burial:', width: '15%' },
+              { type: 'input', value: item.death?.burial, width: '30%', id: 'input-6-' },
+              { type: 'div', width: '55%', display: 'inline-block' },
+              // Spouse
+              { type: 'label', innerHTML: 'Spouse:', width: '25%' },
+              { type: 'select', multiple: true, options: pplList, selected: item.spouse || null, width: '30%', id: 'select-1-' },
+              { type: 'div', width: '25%', display: 'inline-block' },
+              // Exes
+              { type: 'label', innerHTML: 'Former Marriages:', width: '25%' },
+              { type: 'select', multiple: true, options: pplList, selected: item.exes, width: '30%', id: 'select-2-' },
+              { type: 'div', width: '25%', display: 'inline-block' },
+              // Parents
+              { type: 'label', innerHTML: 'Parents:', width: '25%' },
+              { type: 'select', multiple: true, options: pplList, selected: item.parents, width: '30%', id: 'select-3-' },
+              { type: 'div', width: '25%', display: 'inline-block' },
+              // Description
+              { type: 'label', innerHTML: 'Notes/Stories:', width: '100%' },
+              { type: 'textarea', value: item.description || '', width: '100%', id: 'textarea-' }
+            ]
+          },
+          save: function(item, i) {
+            let data = {
+              _id: item._id,
+              name: document.getElementById('input-1-' + i).value,
+              birth: {
+                date: document.getElementById('input-2-' + i).value,
+                location: document.getElementById('input-3-' + i).value
+              },
+              death: {
+                date: document.getElementById('input-4-' + i).value,
+                location: document.getElementById('input-5-' + i).value,
+                burial: document.getElementById('input-6-' + i).value
+              },
+              spouse: getOptions(document.getElementById('select-1-' + i)),
+              exes: getOptions(document.getElementById('select-2-' + i)),
+              parents: getOptions(document.getElementById('select-3-' + i)),
+              description: document.getElementById('textarea-' + i).value
+            }
+            makeRequest('POST', '/data/people', data, saveResponse('people', i),
+              function(err) {
+                console.log(err)
+              }
+            )
+          },
+          createText: 'New Person',
+          createSchema: {
+            name: 'New Person',
+            description: '',
+            birth: {
+              date: '',
+              location: ''
+            },
+            date: {
+              date: '',
+              location: '',
+              burial: ''
+            },
+            spouse: null,
+            exes: [],
+            parents: []
+          }
+        }
+      }
+
+      function render(item = null, i = null) {
+        if (item === null) {
+          let table = document.getElementById('content-table')
+          while (table.firstChild) table.removeChild(table.firstChild)
+
+          let accordion = document.createElement('div')
+          accordion.setAttribute('id', 'accordion')
+          accordion.className = 'mb-3'
+          table.appendChild(accordion)
+          generateAccordion(state[state.active], renderOptions[state.active])
+        } else {
+          let accordion = document.getElementById('accordion')
+          let card = document.getElementById('card' + i)
+          let options = renderOptions[state.active]
+          let data = {}
+          data[i] = item
+
+          if (card) accordion.replaceChild(generateCard(data, options, i), card)
+          else {
+            accordion.removeChild(accordion.lastChild) // Remove edit button
+            accordion.appendChild(generateCard(data, options, i))
+            accordion.appendChild(generateCreateButton(i + 1, options))
+            setTimeout(function() {
+              window.scrollTo(0, document.body.scrollHeight)
+            }, 500)
+          }
+
+          $('select').selectpicker()
+        }
+      }
+
+      function saveResponse(key, i) {
+        return function(res) {
+          let dat = JSON.parse(res.responseText)
+          updateState(key, dat, i)
+          //document.getElementById("accordion-toggle-" + i).click();
+        }
+      }
+
+      function getOptions(elem) {
+        return Array.from(elem.selectedOptions).map(function(s) {
+          return s.value
+        })
+      }
+    </script>
+
+    <script type="text/javascript">
+      function generateAccordion(data, options) {
+        if (data.length === 0) return
+        let accordion = document.getElementById('accordion')
+
+        ;(function accordionLoop(i) {
+          setTimeout(function() {
+            accordion.appendChild(generateCard(data, options, i))
+            if (++i < data.length) accordionLoop(i)
+            else {
+              accordion.appendChild(generateCreateButton(data.length, options))
+              $('select').selectpicker()
+            }
+          }, 50)
+        })(0)
+      }
+
+      function generateCard(data, options, i) {
+        let card = document.createElement('div')
+        card.className = 'card'
+        card.setAttribute('id', 'card' + i)
+
+        // Create header that is always visible and has buton that expands collape
+        card.appendChild(generateCardHeader(data, options, i))
+
+        // Create hidden card that can dropdown on click
+        let collapse = document.createElement('div')
+        collapse.className = 'collapse'
+        collapse.setAttribute('id', 'collapse' + i)
+        collapse.setAttribute('aria-labelledby', 'heading' + i)
+
+        // Create view-only version of item
+        collapse.appendChild(generateReadableBody(data, options, i))
+
+        // Create editing version of item
+        collapse.appendChild(generateEditableBody(data, options, i))
+
+        card.appendChild(collapse)
+
+        return card
+      }
+
+      function generateCardHeader(data, options, i) {
+        let cardHeader = document.createElement('div')
+        cardHeader.className = 'card-header bg-light'
+        cardHeader.setAttribute('id', 'heading' + i)
+
+        if (data[i].timeline) {
+          let index = state.TIME_PERIODS.indexOf(data[i].timeline)
+          let color = Number(index + 6).toString(16)
+          cardHeader.style.cssText =
+            'background-color: #' + color + color + color + '!important;'
+        }
+
+        let header = document.createElement('h5')
+        header.className = 'mb-0'
+
+        let btn = document.createElement('button')
+        btn.className = 'btn collapsed'
+        btn.setAttribute('id', 'accordion-toggle-' + i)
+        btn.setAttribute('data-toggle', 'collapse')
+        btn.setAttribute('data-target', '#collapse' + i)
+        btn.setAttribute('aria-expanded', 'false')
+        btn.setAttribute('aria-controls', 'collapse' + i)
+        btn.innerHTML = options.heading(data[i])
+
+        header.appendChild(btn)
+        cardHeader.appendChild(header)
+
+        return cardHeader
+      }
+
+      function generateReadableBody(data, options, i) {
+        let cardBody = document.createElement('div')
+
+        cardBody.className = 'card-body'
+        cardBody.innerHTML = options.readonly(data[i])
+        cardBody.setAttribute('id', 'collapse-body' + i)
+        cardBody.appendChild(
+          generateButtonGroup([
+            {
+              class: 'btn-sm btn-outline-secondary',
+              name: 'Edit',
+              onclick: function() {
+                document.getElementById('collapse-body' + i).style.display =
+                  'none'
+                document.getElementById(
+                  'collapse-body-edit' + i
+                ).style.display = 'block'
+              }
+            }
+          ])
+        )
+
+        return cardBody
+      }
+
+      function generateEditableBody(data, options, i) {
+        let editCardBody = document.createElement('div')
+        editCardBody.className = 'card-body'
+        editCardBody.style.display = 'none'
+        editCardBody.setAttribute('id', 'collapse-body-edit' + i)
+
+        for (var k = 0; k < options.editlayout(data[i]).length; k++) {
+          let opts = options.editlayout(data[i])[k]
+
+          if (opts.type !== 'checkbox' && opts.type !== 'select')
+            editCardBody.appendChild(generateElement(opts, i))
+          else if (opts.type === 'checkbox')
+            editCardBody.appendChild(generateCheckbox(opts, i))
+          else editCardBody.appendChild(generateSelect(opts, i))
+        }
+
+        editCardBody.appendChild(
+          generateButtonGroup([
+            {
+              class: 'btn-sm btn-outline-secondary',
+              name: 'Save',
+              onclick: function() {
+                options.save(data[i], i)
+                document.getElementById('collapse-body' + i).style.display =
+                  'block'
+                document.getElementById(
+                  'collapse-body-edit' + i
+                ).style.display = 'none'
+              }
+            },
+            {
+              class: 'btn-sm btn-outline-secondary',
+              name: 'Cancel',
+              onclick: function() {
+                document.getElementById('collapse-body' + i).style.display =
+                  'block'
+                document.getElementById(
+                  'collapse-body-edit' + i
+                ).style.display = 'none'
+              }
+            }
+          ])
+        )
+
+        return editCardBody
+      }
+
+      function generateCreateButton(index, options) {
+        return generateButtonGroup([
+          {
+            class: 'btn-sm btn-outline-secondary',
+            name: options.createText,
+            onclick: function() {
+              //data.push(options.createSchema);
+              render(options.createSchema, index)
+
+              document.getElementById('accordion-toggle-' + index).click()
+              document.getElementById('collapse-body' + index).style.display =
+                'none'
+              document.getElementById(
+                'collapse-body-edit' + index
+              ).style.display = 'block'
+            }
+          }
+        ])
+      }
+
+      function generateButtonGroup(data) {
+        let dFlex = document.createElement('div')
+        dFlex.className = 'd-flex justify-content-between align-items-center'
+        let btnGroup = document.createElement('div')
+        btnGroup.classList.add('btn-group')
+
+        for (var i = 0; i < data.length; i++) {
+          let btn = document.createElement('button')
+          btn.setAttribute('type', 'button')
+          btn.className = 'btn ' + data[i].class
+          btn.innerHTML = data[i].name
+          btn.onclick = data[i].onclick
+          btnGroup.appendChild(btn)
+        }
+        dFlex.appendChild(btnGroup)
+        return dFlex
+      }
+
+      function generateCheckbox(opts, i) {
+        let element = document.createElement('div')
+        element.className = 'checkbox'
+        element.style.display = 'inline-block'
+        if (opts.width) element.style.width = opts.width
+
+        let label = document.createElement('label')
+        let input = document.createElement('input')
+        input.type = 'checkbox'
+        if (opts.value) input.setAttribute('checked', opts.value)
+        if (opts.id) input.setAttribute('id', opts.id + i)
+        label.appendChild(document.createTextNode('Required:'))
+        label.appendChild(input)
+        element.appendChild(label)
+
+        return element
+      }
+
+      function generateElement(opts, i) {
+        let element = document.createElement(opts.type)
+
+        if (opts.type) element.type = opts.type
+        if (opts.value) element.value = opts.value
+        if (opts.width) element.style.width = opts.width
+        if (opts.display) element.style.display = opts.display
+        if (opts.id) element.setAttribute('id', opts.id + i)
+        if (opts.innerHTML) element.innerHTML = opts.innerHTML
+        if (opts.type === 'textarea')
+          element.rows =
+            opts.value.split('\n').length > 10
+              ? '' + opts.value.split('\n').length
+              : '10'
+
+        return element
+      }
+
+      function generateSelect(opts, i) {
+        let element = document.createElement('select')
+
+        if (opts.multiple) element.className = 'selectpicker'
+        if (opts.multiple) element.multiple = true
+        if (opts.multiple) element.setAttribute('data-live-search', 'true')
+        if (opts.width) element.style.width = opts.width
+        if (opts.id) element.setAttribute('id', opts.id + i)
+
+        opts.options.forEach(function(choice) {
+          let option = document.createElement('option')
+          option.value = choice._id
+          option.innerHTML = choice.title
+          if (
+            opts.selected &&
+            opts.multiple &&
+            opts.selected
+              .map((o) => o._id && o._id.toString())
+              .indexOf(choice._id && choice._id.toString()) >= 0
+          )
+            option.setAttribute('selected', 'true')
+          else if (opts.selected && opts.selected === choice._id)
+            option.setAttribute('selected', 'true')
+          element.appendChild(option)
+        })
+
+        return element
+      }
+    </script>
+  </body>
+</html>
