@@ -97,11 +97,6 @@ export default class Person extends Component {
             <br/>
             {/* Spouse */}
             <label className={cnLab}>Spouse: </label>
-            {/* <select className="selectpicker" multiple={true} data-live-search="true" value={p.spouse.map(t => t.name)} onChange={(e) => this.updateState('spouse', e)}>
-              {
-                this.props.pplList.map(name => <option key={name} value={name}>{name}</option>)
-              }
-            </select> */}
             <Select isMulti className={cnSel} defaultValue={format(p.spouse)} options={format(this.props.pplList)} onChange={(e) => this.updateSelect('spouse', e)} />
             <br/>
             {/* Exes */}
