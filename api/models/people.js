@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 const { Types } = mongoose.Schema
 
 const schema = new mongoose.Schema({
-  _id: { type: Types.ObjectId, default: new mongoose.Types.ObjectId() },
+  _id: { type: Types.ObjectId, auto: true}, // default: new mongoose.Types.ObjectId() },
   name: { type: String, required: true, unique: true },
   description: { type: String, default: '' },
   birth: {
@@ -22,7 +22,7 @@ const schema = new mongoose.Schema({
 })
 
 schema.statics.retrieve = function(query, limit = 100) {
-  return this.find(query)
+  return this.find(query, '-updated_at -created_at')
     .populate('spouse', 'name')
     .populate('exes', 'name')
     .populate('parents', 'name')
