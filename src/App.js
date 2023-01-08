@@ -1,10 +1,11 @@
 import './App.css'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 
 import PeopleList from './components/peopleList.js'
 
 function App() {
   return (
-    <div>
+    <Router>
       <div id="header" className="align-items-center p-3 bg-dark">
         <h5 className="text-light">Laucks Family History</h5>
       </div>
@@ -16,8 +17,13 @@ function App() {
         </div>
       </div>
 
-      <PeopleList />
-    </div>
+      <Routes>
+        <Route path="/">
+          <Route index element={<PeopleList />} />
+          {/* <Route path="about" element={<About />} /> */}
+        </Route>
+      </Routes>
+    </Router>
   );
 }
 

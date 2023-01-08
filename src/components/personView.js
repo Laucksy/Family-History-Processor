@@ -165,7 +165,8 @@ export default class Person extends Component {
   render() {
     let p = this.state.person
     let cnCollapse = 'collapse' + (this.state.new ? ' show' : '')
-    let gen = this.getGeneration(p, p.name.includes("Norman"))
+    // let gen = this.getGeneration(p, p.name.includes("Norman"))
+    let gen = p.generation || 1
 
     return (
       <div className="card">

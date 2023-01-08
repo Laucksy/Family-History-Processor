@@ -11,12 +11,60 @@ export default class PeopleList extends Component {
     this.onCreate = this.onCreate.bind(this)
     this.renderListView = this.renderListView.bind(this)
     this.renderFamilyView = this.renderFamilyView.bind(this)
+    this.rerenderParentCallback = this.rerenderParentCallback.bind(this)
   }
 
   componentDidMount() {
+    this.rerenderParentCallback()
+  }
+
+  rerenderParentCallback() {
+    // this.forceUpdate();
     axios
       .get('http://localhost:3001/people')
-      .then((res) => this.setState({people: res.data.people}))
+      .then((res) => {
+        let people = res.data.people
+        let queue = ["63a4d9057cea2c3d48315e9b"] // Conrad
+        // let cur = people.find(t => t._id === queue[0])
+        // cur.generation = 1
+        // console.log(people)
+
+        let iterations = 0
+        while (queue.length && iterations < 3) {
+          // iterations += 1
+          let focus = queue[0]
+          let cur = people.find(t => t._id === focus)
+          // console.log("a", cur)
+
+          // let print = cur._id === '63a74b2137a735356dfafc82'
+
+          if (cur._id === "63a4d9057cea2c3d48315e9b") cur.generation = 1
+          if (!cur.generation) {
+            let parents = cur.parents.map(r => people.find(t => t._id === r._id))
+            // if (print) console.log(parents, parents.map(t => 1 + t.generation), Math.max(parents.map(t => 1 + t.generation)))
+            if (parents.some(t => !t.generation)) {
+              parents.forEach(r => r.generation = cur.generation)
+            } else cur.generation = Math.max(...parents.map(t => 1 + t.generation))
+          }
+          if (cur.spouse.length) {
+            let spouses = cur.spouse.map(r => people.find(t => t._id === r._id))
+            spouses.forEach(r => {
+              if (!r.generation) r.generation = cur.generation
+            })
+          }
+          let children = people.filter(t => t.parents.map(r => r._id).includes(cur._id))
+          queue = queue.concat(children.map(t => t._id))
+
+          queue = queue.slice(1)
+          // console.log("b", queue)
+        }
+
+        // console.log(people)
+        people.forEach(p => {
+          if (!p.generation) p.generation = 1
+        })
+        this.setState({people})
+      })
       .catch((err) => console.log(err))
   }
 
@@ -36,10 +84,27 @@ export default class PeopleList extends Component {
 
   renderListView() {
     const pplList = this.state.people.map(p => ({_id: p._id, name: p.name})).filter(p => p.name)
-
+    // console.log("aaa", this.state.people.map(p => p.generation))
+    const minGen = Math.min(...this.state.people.map(p => p.generation))
+    const maxGen = Math.max(...this.state.people.map(p => p.generation))
+    const split = []
+    for (let i = maxGen; i >= minGen; i--) {
+      split.push({index: i, arr: this.state.people.filter(p => p.generation === i)})
+    }
+    // console.log(split, maxGen, minGen)
+    
     return (
       <div>
-        { this.state.people.map(p => <Person key={p._id || p.description} person={p} pplList={pplList} />) }
+        { split.map(s => {
+          let { index, arr } = s
+          return (
+            <div key={"div-" + index}>
+              <h3>Generation {index}</h3>
+              {arr.map(p => <Person key={p._id || p.description} person={p} pplList={pplList} cb={this.rerenderParentCallback} />)}
+            </div>
+          )
+        })}
+        {/* { this.state.people.map(p => <Person key={p._id || p.description} person={p} pplList={pplList} cb={this.rerenderParentCallback} />) } */}
         <button className="btn btn-sm w-25 btn-outline-secondary mt-3" type="button" onClick={this.onCreate}>Create</button>
       </div>
     )

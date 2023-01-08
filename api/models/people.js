@@ -21,7 +21,7 @@ const schema = new mongoose.Schema({
   updated_at: Date
 })
 
-schema.statics.retrieve = function(query, limit = 100) {
+schema.statics.retrieve = function(query, limit = 1000) {
   return this.find(query, '-updated_at -created_at')
     .populate('spouse', 'name')
     .populate('exes', 'name')
