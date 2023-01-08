@@ -14,6 +14,8 @@ export default class Person extends Component {
     }
 
     this.updateState = this.updateState.bind(this)
+    this.updateSelect = this.updateSelect.bind(this)
+    this.getGeneration = this.getGeneration.bind(this)
     this.onEdit = this.onEdit.bind(this)
     this.onSubmit = this.onSubmit.bind(this)
     this.onCancel = this.onCancel.bind(this)
@@ -48,6 +50,26 @@ export default class Person extends Component {
     })
   }
 
+  getGeneration(p, print = false) {      
+    let checks = []
+    if (p.parents.length) {
+      let parents = p.parents.map(t => this.props.pplList.find(r => r._id === t._id))
+      // if (print) console.log("a", parents)
+      checks = checks.concat(parents.map(t => 1 + this.getGeneration(t)))
+    }
+    if (p.spouse.length) {
+      let spouse = this.props.pplList.find(r => r._id === p.spouse[0]._id)
+      // if (print) console.log("b", spouse)
+      if (spouse.parents.length) {
+        let spouseParents = spouse.parents.map(t => this.props.pplList.find(r => r._id === t._id))
+        checks = checks.concat(spouseParents.map(t => 1 + this.getGeneration(t)))
+      }
+    }
+
+    // if (print) console.log(p.name, checks)
+    return Math.max(1, ...checks)
+  }
+
   onEdit() {
     this.setState({editable: true})
   }
@@ -61,7 +83,10 @@ export default class Person extends Component {
     this.setState({new: false})
     axios
       .post('http://localhost:3001/people', data)
-      .then((res) => this.setState({editable: false, original: this.state.person}))
+      .then((res) => {
+        this.setState({editable: false, original: this.state.person})
+        this.props.cb()
+      })
       .catch((err) => console.log(err))
   }
 
@@ -140,7 +165,8 @@ export default class Person extends Component {
   render() {
     let p = this.state.person
     let cnCollapse = 'collapse' + (this.state.new ? ' show' : '')
-    
+    let gen = this.getGeneration(p, p.name.includes("Norman"))
+
     return (
       <div className="card">
         <div className="card-header bg-light">
@@ -150,7 +176,7 @@ export default class Person extends Component {
               type="button"
               data-bs-toggle="collapse"
               data-bs-target={"#collapse-" + p._id}
-            >Person - {p.name}</button>
+            >Person - {p.name} - Generation {gen}</button>
           </h5>
         </div>
 

@@ -3,7 +3,7 @@ const { Types } = mongoose.Schema
 
 const schema = new mongoose.Schema({
   _id: { type: Types.ObjectId, auto: true}, // default: new mongoose.Types.ObjectId() },
-  name: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
   description: { type: String, default: '' },
   birth: {
     date: { type: String, default: '' },
@@ -27,6 +27,7 @@ schema.statics.retrieve = function(query, limit = 100) {
     .populate('exes', 'name')
     .populate('parents', 'name')
     .limit(limit)
+    .sort({created_at: 1})
     .lean()
     .exec()
 }
