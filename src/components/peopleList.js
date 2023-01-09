@@ -8,7 +8,6 @@ export default class PeopleList extends Component {
 
     this.state = {people: [], view: "list", focus: "639fca09157c0d98c539738a"}
 
-    this.onCreate = this.onCreate.bind(this)
     this.renderListView = this.renderListView.bind(this)
     this.renderFamilyView = this.renderFamilyView.bind(this)
     this.rerenderParentCallback = this.rerenderParentCallback.bind(this)
@@ -19,79 +18,74 @@ export default class PeopleList extends Component {
   }
 
   rerenderParentCallback() {
-    // this.forceUpdate();
     axios
       .get('http://localhost:3001/people')
       .then((res) => {
         let people = res.data.people
-        let queue = ["63a4d9057cea2c3d48315e9b"] // Conrad
-        // let cur = people.find(t => t._id === queue[0])
-        // cur.generation = 1
-        // console.log(people)
+        let queue = ["63a4d9057cea2c3d48315e9b"] // , "63b8ec53a81fcec3d0514c9e"] // Conrad, Frank
+        let hashmap = {"63a4d9057cea2c3d48315e9b": 1}
 
+        // console.log(people)
         let iterations = 0
-        while (queue.length && iterations < 3) {
+        while (queue.length && iterations < 150) {
           // iterations += 1
           let focus = queue[0]
           let cur = people.find(t => t._id === focus)
-          // console.log("a", cur)
 
-          // let print = cur._id === '63a74b2137a735356dfafc82'
+          let print = cur.name === 'Marion Alice Hickernell'
+          if (print) console.log("a", cur.name, cur.generation)
 
           if (cur._id === "63a4d9057cea2c3d48315e9b") cur.generation = 1
           if (!cur.generation) {
+            let spouse = cur.spouse.length ? people.find(t => t._id === cur.spouse[0]._id) : null
             let parents = cur.parents.map(r => people.find(t => t._id === r._id))
-            // if (print) console.log(parents, parents.map(t => 1 + t.generation), Math.max(parents.map(t => 1 + t.generation)))
-            if (parents.some(t => !t.generation)) {
-              parents.forEach(r => r.generation = cur.generation)
-            } else cur.generation = Math.max(...parents.map(t => 1 + t.generation))
+            let children = people.filter(t => t.parents.map(r => r._id).includes(cur._id))
+
+
+            if (spouse?.generation) cur.generation = spouse.generation
+            else if (parents.some(t => t.generation)) cur.generation = Math.max(...parents.map(t => t.generation + 1))
+            else if (children.some(t => t.generation)) cur.generation = Math.min(...children.map(t => t.generation - 1))
+            // else {
+            //   let parents = cur.parents.map(r => people.find(t => t._id === r._id))
+              // if (print) console.log(parents, parents.map(t => 1 + t.generation), Math.max(parents.map(t => 1 + t.generation)))
+              // if (print) console.log(parents, parents.some(t => !t.generation))
+              // if (parents.some(t => !t.generation)) parents.forEach(r => r.generation = cur.generation - 1)
+            //   cur.generation = Math.max(...parents.map(t => 1 + t.generation))
+            // }
+          }
+          if (cur.parents.length) {
+            let parents = cur.parents.map(r => people.find(t => t._id === r._id)).filter(t => !hashmap[t._id])
+            queue = queue.concat(parents.map(t => t._id))
+            parents.forEach(t => hashmap[t._id] = 1)
           }
           if (cur.spouse.length) {
-            let spouses = cur.spouse.map(r => people.find(t => t._id === r._id))
-            spouses.forEach(r => {
-              if (!r.generation) r.generation = cur.generation
-            })
+            let spouses = cur.spouse.map(r => people.find(t => t._id === r._id)).filter(t => !hashmap[t._id])
+            // spouses.forEach(r => { if (!r.generation) r.generation = cur.generation })
+            queue = queue.concat(spouses.map(t => t._id))
+            spouses.forEach(t => hashmap[t._id] = 1)
           }
-          let children = people.filter(t => t.parents.map(r => r._id).includes(cur._id))
+          let children = people.filter(t => t.parents.map(r => r._id).includes(cur._id)).filter(t => !hashmap[t._id])
           queue = queue.concat(children.map(t => t._id))
+          children.forEach(t => hashmap[t._id] = 1)
 
           queue = queue.slice(1)
           // console.log("b", queue)
         }
 
-        // console.log(people)
-        people.forEach(p => {
-          if (!p.generation) p.generation = 1
-        })
+        people.forEach(p => { if (!p.generation) p.generation = 1 })
         this.setState({people})
       })
       .catch((err) => console.log(err))
   }
 
-  onCreate() {
-    let template = {
-      "name": "",
-      "birth": {"date": "", "location": ""},
-      "death": {"date": "", "location": "", "burial": ""},
-      "exes": [],
-      "parents": [],
-      "spouse": [],
-      "description": "New Person"
-    }
-
-    this.setState({people: [...this.state.people, template]})
-  }
-
   renderListView() {
     const pplList = this.state.people.map(p => ({_id: p._id, name: p.name})).filter(p => p.name)
-    // console.log("aaa", this.state.people.map(p => p.generation))
     const minGen = Math.min(...this.state.people.map(p => p.generation))
     const maxGen = Math.max(...this.state.people.map(p => p.generation))
     const split = []
     for (let i = maxGen; i >= minGen; i--) {
       split.push({index: i, arr: this.state.people.filter(p => p.generation === i)})
     }
-    // console.log(split, maxGen, minGen)
     
     return (
       <div>
@@ -104,8 +98,6 @@ export default class PeopleList extends Component {
             </div>
           )
         })}
-        {/* { this.state.people.map(p => <Person key={p._id || p.description} person={p} pplList={pplList} cb={this.rerenderParentCallback} />) } */}
-        <button className="btn btn-sm w-25 btn-outline-secondary mt-3" type="button" onClick={this.onCreate}>Create</button>
       </div>
     )
   }
@@ -148,17 +140,47 @@ export default class PeopleList extends Component {
   render() {
     const cnLBtn = "btn " + (this.state.view === 'list' ? "btn-secondary" : "btn-light")
     const cnFBtn = "btn " + (this.state.view === 'family' ? "btn-secondary" : "btn-light")
+    const pplList = this.state.people.map(p => ({_id: p._id, name: p.name})).filter(p => p.name)
+    let template = {
+      "name": "",
+      "birth": {"date": "", "location": ""},
+      "death": {"date": "", "location": "", "burial": ""},
+      "exes": [],
+      "parents": [],
+      "spouse": [],
+      "description": "New Person",
+      "generation": 14
+    }
 
     return (
       <div className="container pt-3">
         <div className="text-center pb-3">
           <div className="btn-group">
             <button className={cnLBtn} onClick={() => this.setState({view: 'list'})}>List View</button>
+            <button className="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">Create</button>
             <button className={cnFBtn} onClick={() => this.setState({view: 'family'})}>Family View</button>
           </div>
         </div>
 
         { this.state.view === 'list' ? this.renderListView() : this.renderFamilyView() }
+
+        <div className="modal fade" id="createModal" aria-hidden="true">
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Create New Person</h5>
+                <button type="button" className="btn-close" data-bs-dismiss="modal" onClick={this.rerenderParentCallback}></button>
+              </div>
+              <div className="modal-body">
+                <Person key="New Person" person={{...template}} pplList={pplList} isNew={true} cb={this.rerenderParentCallback} />
+              </div>
+              {/* <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Save changes</button>
+              </div> */}
+            </div>
+          </div>
+        </div>
       </div>
     )
   }

@@ -84,7 +84,8 @@ export default class Person extends Component {
     axios
       .post('http://localhost:3001/people', data)
       .then((res) => {
-        this.setState({editable: false, original: this.state.person})
+        if (this.props.isNew) this.setState({editable: true, person: this.state.original})
+        else this.setState({editable: false, original: this.state.person})
         this.props.cb()
       })
       .catch((err) => console.log(err))
@@ -153,11 +154,13 @@ export default class Person extends Component {
           <label className={cnLab}>Notes: </label>
           <textarea className="w-100" rows={5} value={p.description} onChange={(e) => this.updateState('description', e)} />
         </div>
-        <div className="form-group">
-          {/* <input type="submit" value="Save" className="btn w-25 btn-outline-secondary" /> */}
-          <button className="btn w-25 btn-outline-secondary" onClick={this.onSubmit}>Submit</button>
-          <button className="btn w-25 btn-outline-secondary" onClick={this.onCancel}>Cancel</button>
-        </div>
+        {/* { !this.props.isNew ?  */}
+          <div className="form-group">
+            {/* <input type="submit" value="Save" className="btn w-25 btn-outline-secondary" /> */}
+            <button className="btn w-25 btn-outline-secondary" onClick={this.onSubmit}>Submit</button>
+            <button className="btn w-25 btn-outline-secondary" onClick={this.onCancel}>Cancel</button>
+          </div>
+          {/* : null } */}
       </div>
     )
   }
