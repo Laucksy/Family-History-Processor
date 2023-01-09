@@ -22,54 +22,37 @@ export default class PeopleList extends Component {
       .get('http://localhost:3001/people')
       .then((res) => {
         let people = res.data.people
-        let queue = ["63a4d9057cea2c3d48315e9b"] // , "63b8ec53a81fcec3d0514c9e"] // Conrad, Frank
+        let queue = ["63a4d9057cea2c3d48315e9b"]  // Conrad
         let hashmap = {"63a4d9057cea2c3d48315e9b": 1}
 
-        // console.log(people)
+        let proc = (arr) => {
+          arr = arr.filter(t => !hashmap[t._id])
+          queue = queue.concat(arr.map(t => t._id))
+          arr.forEach(t => hashmap[t._id] = 1)
+        }
+
         let iterations = 0
-        while (queue.length && iterations < 150) {
+        while (queue.length && iterations < 5) {
           // iterations += 1
           let focus = queue[0]
           let cur = people.find(t => t._id === focus)
-
-          let print = cur.name === 'Marion Alice Hickernell'
-          if (print) console.log("a", cur.name, cur.generation)
+          // let print = cur.name === 'Marion Alice Hickernell'
+          
+          let spouses = cur.spouse.map(r => people.find(t => t._id === r._id))
+          let parents = cur.parents.map(r => people.find(t => t._id === r._id))
+          let children = people.filter(t => t.parents.map(r => r._id).includes(cur._id))
 
           if (cur._id === "63a4d9057cea2c3d48315e9b") cur.generation = 1
-          if (!cur.generation) {
-            let spouse = cur.spouse.length ? people.find(t => t._id === cur.spouse[0]._id) : null
-            let parents = cur.parents.map(r => people.find(t => t._id === r._id))
-            let children = people.filter(t => t.parents.map(r => r._id).includes(cur._id))
-
-
-            if (spouse?.generation) cur.generation = spouse.generation
+          else {
+            if (spouses.some(t => t.generation)) cur.generation = Math.max(...spouses.map(t => t.generation))
             else if (parents.some(t => t.generation)) cur.generation = Math.max(...parents.map(t => t.generation + 1))
             else if (children.some(t => t.generation)) cur.generation = Math.min(...children.map(t => t.generation - 1))
-            // else {
-            //   let parents = cur.parents.map(r => people.find(t => t._id === r._id))
-              // if (print) console.log(parents, parents.map(t => 1 + t.generation), Math.max(parents.map(t => 1 + t.generation)))
-              // if (print) console.log(parents, parents.some(t => !t.generation))
-              // if (parents.some(t => !t.generation)) parents.forEach(r => r.generation = cur.generation - 1)
-            //   cur.generation = Math.max(...parents.map(t => 1 + t.generation))
-            // }
           }
-          if (cur.parents.length) {
-            let parents = cur.parents.map(r => people.find(t => t._id === r._id)).filter(t => !hashmap[t._id])
-            queue = queue.concat(parents.map(t => t._id))
-            parents.forEach(t => hashmap[t._id] = 1)
-          }
-          if (cur.spouse.length) {
-            let spouses = cur.spouse.map(r => people.find(t => t._id === r._id)).filter(t => !hashmap[t._id])
-            // spouses.forEach(r => { if (!r.generation) r.generation = cur.generation })
-            queue = queue.concat(spouses.map(t => t._id))
-            spouses.forEach(t => hashmap[t._id] = 1)
-          }
-          let children = people.filter(t => t.parents.map(r => r._id).includes(cur._id)).filter(t => !hashmap[t._id])
-          queue = queue.concat(children.map(t => t._id))
-          children.forEach(t => hashmap[t._id] = 1)
+          proc(spouses)
+          proc(parents)
+          proc(children)
 
           queue = queue.slice(1)
-          // console.log("b", queue)
         }
 
         people.forEach(p => { if (!p.generation) p.generation = 1 })
@@ -174,10 +157,6 @@ export default class PeopleList extends Component {
               <div className="modal-body">
                 <Person key="New Person" person={{...template}} pplList={pplList} isNew={true} cb={this.rerenderParentCallback} />
               </div>
-              {/* <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary">Save changes</button>
-              </div> */}
             </div>
           </div>
         </div>
